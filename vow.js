@@ -30,7 +30,8 @@ var VOW = (function () {
     function enqueue(
         queue,      // An array of resolve functions (keepers or breakers)
         func,       // A function that was registered with the .when method
-        vow         // A vow that provides the resolution functions
+        vow,         // A vow that provides the resolution functions
+        next        // A cascade function for such cases when current item is not a function
     ) {
 
 // enqueue is a helper function used by .when. It will append a function to
@@ -41,7 +42,7 @@ var VOW = (function () {
 // If func is not a function, push the resolver so that the value passes to
 // the next cascaded .when.
 
-            ? vow.keep
+            ? next
 
 // If the func is a function, push a function that calls func with a value.
 // The result can be a promise, or not a promise, or an exception.
@@ -146,15 +147,15 @@ var VOW = (function () {
 // If this promise is still pending, then enqueue both kept and broken.
 
                         case 'pending':
-                            enqueue(keepers,  kept,   vow);
-                            enqueue(breakers, broken, vow);
+                            enqueue(keepers,  kept,   vow, vow.keep);
+                            enqueue(breakers, broken, vow, vow['break']);
                             break;
 
 // If the promise has already been kept, then enqueue only the kept function,
 // and enlighten it.
 
                         case 'kept':
-                            enqueue(keepers, kept, vow);
+                            enqueue(keepers, kept, vow, vow.keep);
                             enlighten(keepers, fate);
                             break;
 
@@ -162,7 +163,7 @@ var VOW = (function () {
 // function, and enlighten it.
 
                         case 'broken':
-                            enqueue(breakers, broken, vow);
+                            enqueue(breakers, broken, vow, vow['break']);
                             enlighten(breakers, fate);
                             break;
                         }
